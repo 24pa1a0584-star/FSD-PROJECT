@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Dumbbell, Shield, User, Key, CheckCircle, ArrowRight, UserPlus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '../services/api';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid institutional email'),
@@ -26,8 +27,31 @@ const registerSchema = z.object({
 
 const LoginPage = () => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [gymList, setGymList] = useState([]);
+  const [isGymsLoading, setIsGymsLoading] = useState(false);
   const { login, registerStudent } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchGyms = async () => {
+      try {
+        setIsGymsLoading(true);
+        const res = await api.get('/gyms/public');
+        if (isMounted && res.data?.gyms) {
+          setGymList(res.data.gyms);
+        }
+      } catch (err) {
+        console.warn('Failed to load public gyms:', err.message);
+      } finally {
+        if (isMounted) setIsGymsLoading(false);
+      }
+    };
+    fetchGyms();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const {
     register: loginRegister,
@@ -392,9 +416,21 @@ const LoginPage = () => {
                     {...regRegister('assignedGym')}
                     className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
                   >
-                    <option value="">Select Facility...</option>
-                    <option value="BOYS_GYM">Vishnu Boys Gym</option>
-                    <option value="GIRLS_GYM">Vishnu Girls Gym</option>
+                    <option value="">
+                      {isGymsLoading ? 'Loading facilities...' : 'Select Facility...'}
+                    </option>
+                    {gymList.length > 0 ? (
+                      gymList.map((g) => (
+                        <option key={g._id} value={g._id}>
+                          {g.name} ({g.code === 'BOYS_GYM' ? 'Boys Campus' : 'Girls Campus'})
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="BOYS_GYM">Vishnu Boys Gym</option>
+                        <option value="GIRLS_GYM">Vishnu Girls Gym</option>
+                      </>
+                    )}
                   </select>
                   {regErrors.assignedGym && <p className="text-[11px] text-rose-500">{regErrors.assignedGym.message}</p>}
                 </div>

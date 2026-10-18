@@ -157,19 +157,62 @@ const approveRegistration = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Registration request not found.' });
     }
 
+    // Facility isolation check: GYM_MANAGER can only approve their own gym's registrations
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== registration.gymId.toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to approve registrations for this gym facility.',
+      });
+    }
+
     if (registration.status === 'APPROVED') {
       return res.status(400).json({ success: false, message: 'This application is already approved.' });
     }
 
-    // Default or Semester membership type
+    // Check if student already has an active membership for this facility
+    const existingActive = await Membership.findOne({
+      studentId: registration.studentId._id,
+      gymId: registration.gymId,
+      status: 'ACTIVE',
+    });
+
+    if (existingActive) {
+      registration.status = 'APPROVED';
+      registration.reviewedBy = req.user._id;
+      registration.reviewedAt = new Date();
+      registration.remarks = remarks || 'Approved (Active membership already exists).';
+      await registration.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Registration approved. Student already holds an active membership.',
+        registration,
+        membership: existingActive,
+      });
+    }
+
+    // Ensure MembershipType exists (fallback to SEMESTER or first active or create)
     let membershipType = await MembershipType.findOne({ code: 'SEMESTER' });
     if (!membershipType) {
-      membershipType = await MembershipType.findOne();
+      membershipType = await MembershipType.findOne({ isActive: true });
+    }
+    if (!membershipType) {
+      membershipType = await MembershipType.create({
+        name: 'Semester',
+        code: 'SEMESTER',
+        durationMonths: 6,
+        feeAmount: 0,
+        description: 'Standard semester campus gym pass',
+        isActive: true,
+      });
     }
 
     const startDate = new Date();
     const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + parseInt(durationMonths));
+    endDate.setMonth(endDate.getMonth() + parseInt(durationMonths, 10));
 
     // Update Registration
     registration.status = 'APPROVED';
@@ -178,8 +221,9 @@ const approveRegistration = async (req, res, next) => {
     registration.remarks = remarks || 'Approved after institutional verification.';
     await registration.save();
 
-    // Create / Update active membership
-    const qrCardId = `VITB-GYM-${registration.studentId.rollNumber}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    // Create active membership
+    const roll = registration.studentSnapshot?.rollNumber || registration.studentId?.rollNumber || 'STUDENT';
+    const qrCardId = `VITB-GYM-${roll}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
     const membership = await Membership.create({
       studentId: registration.studentId._id,
@@ -231,7 +275,7 @@ const approveRegistration = async (req, res, next) => {
       resourceId: registration._id.toString(),
       gymId: registration.gymId,
       ipAddress: req.ip,
-      details: { rollNumber: registration.studentSnapshot.rollNumber, membershipId: membership._id },
+      details: { rollNumber: roll, membershipId: membership._id },
     });
 
     res.status(200).json({
@@ -256,6 +300,17 @@ const rejectRegistration = async (req, res, next) => {
     const registration = await GymRegistration.findById(id);
     if (!registration) {
       return res.status(404).json({ success: false, message: 'Registration request not found.' });
+    }
+
+    // Facility isolation check: GYM_MANAGER can only reject their own gym's registrations
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== registration.gymId.toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to reject registrations for this gym facility.',
+      });
     }
 
     registration.status = 'REJECTED';

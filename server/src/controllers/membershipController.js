@@ -113,6 +113,17 @@ const renewMembership = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Membership not found' });
     }
 
+    // Facility isolation check: GYM_MANAGER can only renew their own facility's memberships
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== membership.gymId.toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to renew memberships for another gym facility.',
+      });
+    }
+
     const currentEnd = new Date(membership.endDate > new Date() ? membership.endDate : new Date());
     const newEndDate = new Date(currentEnd);
     newEndDate.setMonth(newEndDate.getMonth() + parseInt(additionalMonths));
@@ -166,6 +177,17 @@ const updateMembershipStatus = async (req, res, next) => {
     const membership = await Membership.findById(id);
     if (!membership) {
       return res.status(404).json({ success: false, message: 'Membership not found' });
+    }
+
+    // Facility isolation check: GYM_MANAGER can only update their own facility's memberships
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== membership.gymId.toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to update memberships for another gym facility.',
+      });
     }
 
     membership.status = status;

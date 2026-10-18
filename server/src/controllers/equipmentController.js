@@ -36,6 +36,17 @@ const createEquipment = async (req, res, next) => {
   try {
     const validatedData = createEquipmentSchema.parse(req.body);
 
+    // Facility isolation check
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== validatedData.gymId.toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to add equipment to another facility.',
+      });
+    }
+
     const existingCode = await Equipment.findOne({
       gymId: validatedData.gymId,
       code: validatedData.code.toUpperCase(),
@@ -85,6 +96,17 @@ const updateEquipment = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Equipment item not found' });
     }
 
+    // Facility isolation check
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== equipment.gymId.toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to modify equipment belonging to another facility.',
+      });
+    }
+
     Object.assign(equipment, req.body);
     await equipment.save();
 
@@ -110,6 +132,17 @@ const reportMaintenance = async (req, res, next) => {
     const equipment = await Equipment.findById(id);
     if (!equipment) {
       return res.status(404).json({ success: false, message: 'Equipment not found' });
+    }
+
+    // Facility isolation check
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== equipment.gymId.toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to report maintenance on equipment of another facility.',
+      });
     }
 
     const maintenanceLog = await EquipmentMaintenance.create({

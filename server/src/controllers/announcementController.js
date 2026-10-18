@@ -25,12 +25,17 @@ const createAnnouncement = async (req, res, next) => {
   try {
     const { title, content, targetAudience, priority, gymId, expiresAt } = req.body;
 
+    let targetGymId = gymId || null;
+    if (req.user?.role !== 'SUPER_ADMIN' && req.user?.assignedGym) {
+      targetGymId = req.user.assignedGym;
+    }
+
     const announcement = await Announcement.create({
       title,
       content,
       targetAudience: targetAudience || 'ALL',
       priority: priority || 'NORMAL',
-      gymId: gymId || null,
+      gymId: targetGymId,
       createdBy: req.user._id,
       expiresAt: expiresAt || null,
     });
@@ -41,8 +46,8 @@ const createAnnouncement = async (req, res, next) => {
 
     const io = req.app.get('io');
     if (io) {
-      if (gymId) {
-        io.to(`gym_${gymId}`).emit('announcement:new', populated);
+      if (targetGymId) {
+        io.to(`gym_${targetGymId}`).emit('announcement:new', populated);
       } else {
         io.emit('announcement:new', populated);
       }
@@ -61,7 +66,21 @@ const createAnnouncement = async (req, res, next) => {
 const deleteAnnouncement = async (req, res, next) => {
   try {
     const { id } = req.params;
-    await Announcement.findByIdAndDelete(id);
+    const announcement = await Announcement.findById(id);
+    if (!announcement) {
+      return res.status(404).json({ success: false, message: 'Announcement not found' });
+    }
+
+    if (req.user?.role !== 'SUPER_ADMIN' && req.user?.assignedGym) {
+      if (announcement.gymId && announcement.gymId.toString() !== req.user.assignedGym.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You are not authorized to delete announcements for another gym facility.',
+        });
+      }
+    }
+
+    await announcement.deleteOne();
     res.status(200).json({ success: true, message: 'Announcement deleted successfully' });
   } catch (error) {
     next(error);

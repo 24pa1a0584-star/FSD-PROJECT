@@ -6,7 +6,6 @@ const attendanceSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Student',
       required: true,
-      index: true,
     },
     gymId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -54,8 +53,11 @@ const attendanceSchema = new mongoose.Schema(
   }
 );
 
-// Compound index for querying active sessions for a student (prevents duplicate active sessions)
-attendanceSchema.index({ studentId: 1, status: 1 });
+// Unique partial index: Guarantees a student can NEVER have more than one ACTIVE attendance session simultaneously
+attendanceSchema.index(
+  { studentId: 1 },
+  { unique: true, partialFilterExpression: { status: 'ACTIVE' } }
+);
 // Compound index for facility daily reports and real-time active users
 attendanceSchema.index({ gymId: 1, checkInTime: -1, status: 1 });
 attendanceSchema.index({ gymId: 1, status: 1 });

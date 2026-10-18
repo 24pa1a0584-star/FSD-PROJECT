@@ -34,6 +34,7 @@ const RegistrationsPage = () => {
   const approveMutation = useMutation({
     mutationFn: async ({ id, remarks, durationMonths }) => {
       const res = await api.patch(`/registrations/${id}/approve`, {
+        status: 'APPROVED',
         remarks,
         durationMonths,
       });

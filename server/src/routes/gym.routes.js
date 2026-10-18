@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   getGyms,
+  getPublicGyms,
   getGymById,
   updateGym,
   getCampusDashboardStats,
@@ -9,6 +10,9 @@ const {
 } = require('../controllers/gymController');
 const { authenticate, requireRoles } = require('../middleware/authMiddleware');
 const { authorizeGymScope } = require('../middleware/gymScopeMiddleware');
+
+// Public read-only endpoint for student registration dropdowns (unauthenticated)
+router.get('/public', getPublicGyms);
 
 router.get('/', authenticate, getGyms);
 router.get('/campus/dashboard', authenticate, requireRoles('SUPER_ADMIN'), getCampusDashboardStats);

@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const app = require('./app');
 const { connectDB, disconnectDB } = require('./config/db');
+const { initDatabase } = require('./config/initDatabase');
 const { initSocketIO } = require('./sockets/socketHandler');
 
 const PORT = parseInt(process.env.PORT, 10) || 5000;
@@ -11,7 +12,7 @@ const clientUrl = process.env.CLIENT_URL;
 
 const server = http.createServer(app);
 
-// Allowed origins for Socket.IO
+// Allowed origins for Socket.IO & CORS
 const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
@@ -22,16 +23,24 @@ if (clientUrl) {
   allowedOrigins.push(clientUrl);
 }
 
-// Setup Socket.IO
+const checkOrigin = (origin, callback) => {
+  // Allow requests with no origin (e.g. server-to-server, curl, same-origin GETs)
+  if (!origin) return callback(null, true);
+  if (allowedOrigins.includes(origin)) return callback(null, true);
+  if (clientUrl && origin === clientUrl) return callback(null, true);
+  try {
+    const url = new URL(origin);
+    if (url.hostname.endsWith('.onrender.com') || url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      return callback(null, true);
+    }
+  } catch {}
+  return callback(new Error('Blocked by CORS policy'));
+};
+
+// Setup Socket.IO with strict CORS
 const io = new Server(server, {
   cors: {
-    origin: (origin, callback) => {
-      // Allow same-origin, whitelist, or any origin in production single-service mode
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'production') {
-        return callback(null, true);
-      }
-      return callback(null, true);
-    },
+    origin: checkOrigin,
     credentials: true,
     methods: ['GET', 'POST'],
   },
@@ -44,6 +53,7 @@ initSocketIO(io);
 const startServer = async () => {
   try {
     await connectDB();
+    await initDatabase();
     server.listen(PORT, HOST, () => {
       console.log(`=======================================================`);
       console.log(`🚀 VISHNUFIT Server Started Successfully`);

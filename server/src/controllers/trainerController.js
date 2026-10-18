@@ -43,6 +43,16 @@ const createTrainer = async (req, res, next) => {
   try {
     const { name, email, password, gymId, specialization, certifications, bio, maxStudents } = req.body;
 
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== gymId?.toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to create trainers for another facility.',
+      });
+    }
+
     let user = await User.findOne({ email });
     if (!user) {
       const salt = await bcrypt.genSalt(10);
@@ -90,6 +100,16 @@ const updateTrainer = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Trainer not found' });
     }
 
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== trainer.gymId.toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to modify trainers of another facility.',
+      });
+    }
+
     if (specialization) trainer.specialization = specialization;
     if (certifications) trainer.certifications = certifications;
     if (bio) trainer.bio = bio;
@@ -118,6 +138,17 @@ const assignTrainer = async (req, res, next) => {
 
     if (!trainer || !student) {
       return res.status(404).json({ success: false, message: 'Trainer or Student record not found' });
+    }
+
+    // Facility isolation check
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== trainer.gymId.toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to assign trainers for another facility.',
+      });
     }
 
     // Verify facility match

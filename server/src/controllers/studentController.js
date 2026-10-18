@@ -75,10 +75,21 @@ const getStudentById = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Student record not found' });
     }
 
+    // Facility isolation check: GYM_MANAGER cannot view students from another facility
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== (student.assignedGym?._id || student.assignedGym).toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to view students from another facility.',
+      });
+    }
+
     // Fetch active membership
     const membership = await Membership.findOne({
       studentId: student._id,
-      gymId: student.assignedGym._id,
+      gymId: student.assignedGym._id || student.assignedGym,
       status: 'ACTIVE',
     }).populate('membershipTypeId');
 
@@ -115,6 +126,17 @@ const updateStudent = async (req, res, next) => {
 
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    // Facility isolation check: GYM_MANAGER cannot update students from another facility
+    if (
+      req.user.role === 'GYM_MANAGER' &&
+      (!req.user.assignedGym || req.user.assignedGym.toString() !== student.assignedGym?.toString())
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You are not authorized to modify students of another facility.',
+      });
     }
 
     if (contactNumber) student.contactNumber = contactNumber;

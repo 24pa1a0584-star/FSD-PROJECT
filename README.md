@@ -420,18 +420,43 @@ Render will start building your project:
 
 ---
 
-### Step 5: (Optional) Initial Database Seeding on Atlas
+### Step 5: Safe Initial Database Setup & Super Admin Bootstrap (Render Compatible)
 
-If your MongoDB Atlas database is completely empty and you want to populate it with the Vishnu Boys Gym, Girls Gym, trainers, equipment inventory, and sample student records once:
-1. Temporarily run the seed script locally pointing to your Atlas database:
-   ```powershell
-   $env:MONGODB_URI="mongodb+srv://vishnu_admin:YOUR_PASSWORD@cluster0.abcde.mongodb.net/vishnufit?retryWrites=true&w=majority"
-   npm run seed
-   ```
-2. Your Atlas cluster will now contain all initial facilities, sample users, and equipment.
-3. *Note: The production server will NEVER wipe or seed data automatically on Render startup to protect your live data.*
+When deploying to a fresh MongoDB Atlas database on Render's free tier (where interactive shell access is unavailable), use the **Safe Idempotent Bootstrap Mechanism**.
+
+> [!IMPORTANT]
+> Never run destructive seed scripts (`seed.js`) against your live production database. The server automatically initializes the core facilities (`BOYS_GYM`, `GIRLS_GYM`), standard membership plans (`SEMESTER`, `ANNUAL`, `MONTHLY`, `SPECIAL`), and campus operational settings on startup using safe Mongoose `$setOnInsert` operations without deleting or altering existing data.
+
+#### How to Bootstrap Your First Administrator Account on Render:
+1. **Go to your Render Dashboard** -> Click your **vishnufit** Web Service -> **Environment**.
+2. Add the following environment variables:
+   | Key | Example Value | Description |
+   |---|---|---|
+   | `INITIAL_SETUP_ENABLED` | `true` | Enables one-time administrator creation |
+   | `BOOTSTRAP_ADMIN_NAME` | `Super Administrator` | Display name for Super Admin |
+   | `BOOTSTRAP_ADMIN_EMAIL` | `superadmin@vishnu.edu.in` | Login email for Super Admin |
+   | `BOOTSTRAP_ADMIN_PASSWORD` | `YourStrongAdminPassword@123` | Secure password (min 8 chars) |
+   | `BOOTSTRAP_BOYS_MANAGER_EMAIL` | `manager.boys@vishnu.edu.in` | *(Optional)* Boys Gym Manager email |
+   | `BOOTSTRAP_BOYS_MANAGER_PASSWORD` | `YourBoysManagerPassword@123` | *(Optional)* Boys Gym Manager password |
+   | `BOOTSTRAP_GIRLS_MANAGER_EMAIL` | `manager.girls@vishnu.edu.in` | *(Optional)* Girls Gym Manager email |
+   | `BOOTSTRAP_GIRLS_MANAGER_PASSWORD` | `YourGirlsManagerPassword@123` | *(Optional)* Girls Gym Manager password |
+3. **Save Changes**: Render will automatically trigger a rolling redeployment.
+4. **Log In**: Open `https://vishnufit.onrender.com/login` and log in with your bootstrap administrator credentials.
+5. **Disable Bootstrap**: Return to Render **Environment**, set `INITIAL_SETUP_ENABLED` to `false` (or delete the bootstrap password variables), and save. Existing credentials are never overwritten or logged.
 
 ---
+
+### Step 6: Running Automated Regression Tests
+
+To run the full suite of 22 backend automated tests covering idempotent initialization, gym facility isolation, dynamic gym registration, server-side approval, and attendance concurrency:
+```bash
+npm test --prefix server
+```
+
+To run only the dedicated Faculty Demonstration suite:
+```bash
+npx vitest run tests/faculty-demonstration.test.js --dir server
+```
 
 ---
 

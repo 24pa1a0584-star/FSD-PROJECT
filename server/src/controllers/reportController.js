@@ -18,7 +18,11 @@ const getAttendanceReports = async (req, res, next) => {
     startDate.setHours(0, 0, 0, 0);
 
     const matchStage = { checkInTime: { $gte: startDate } };
-    if (gymId) matchStage.gymId = new mongoose.Types.ObjectId(gymId);
+    let targetGymId = gymId;
+    if (req.user?.role !== 'SUPER_ADMIN' && req.user?.assignedGym) {
+      targetGymId = req.user.assignedGym;
+    }
+    if (targetGymId) matchStage.gymId = new mongoose.Types.ObjectId(targetGymId);
 
     const stats = await Attendance.aggregate([
       { $match: matchStage },
@@ -89,7 +93,11 @@ const getDepartmentReport = async (req, res, next) => {
   try {
     const { gymId } = req.query;
     const match = {};
-    if (gymId) match.assignedGym = new mongoose.Types.ObjectId(gymId);
+    let targetGymId = gymId;
+    if (req.user?.role !== 'SUPER_ADMIN' && req.user?.assignedGym) {
+      targetGymId = req.user.assignedGym;
+    }
+    if (targetGymId) match.assignedGym = new mongoose.Types.ObjectId(targetGymId);
 
     const departments = await Student.aggregate([
       { $match: match },
@@ -121,7 +129,11 @@ const getEquipmentReport = async (req, res, next) => {
   try {
     const { gymId } = req.query;
     const match = {};
-    if (gymId) match.gymId = new mongoose.Types.ObjectId(gymId);
+    let targetGymId = gymId;
+    if (req.user?.role !== 'SUPER_ADMIN' && req.user?.assignedGym) {
+      targetGymId = req.user.assignedGym;
+    }
+    if (targetGymId) match.gymId = new mongoose.Types.ObjectId(targetGymId);
 
     const breakdown = await Equipment.aggregate([
       { $match: match },

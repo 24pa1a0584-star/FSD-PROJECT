@@ -21,6 +21,21 @@ const getGyms = async (req, res, next) => {
 };
 
 /**
+ * Public, read-only list of active gym facilities for registration dropdowns
+ */
+const getPublicGyms = async (req, res, next) => {
+  try {
+    const gyms = await Gym.find({ isActive: true })
+      .select('_id name code location capacity operatingHours description')
+      .sort({ name: 1 })
+      .lean();
+    res.status(200).json({ success: true, count: gyms.length, gyms });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Get gym details by ID
  */
 const getGymById = async (req, res, next) => {
@@ -349,6 +364,7 @@ const getFacilityDashboardStats = async (req, res, next) => {
 
 module.exports = {
   getGyms,
+  getPublicGyms,
   getGymById,
   updateGym,
   getCampusDashboardStats,

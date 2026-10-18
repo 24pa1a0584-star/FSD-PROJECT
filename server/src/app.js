@@ -47,15 +47,23 @@ if (clientUrl) {
   allowedOrigins.push(clientUrl);
 }
 
+const checkOrigin = (origin, callback) => {
+  // Allow requests with no origin (e.g. server-to-server, curl, same-origin GETs)
+  if (!origin) return callback(null, true);
+  if (allowedOrigins.includes(origin)) return callback(null, true);
+  if (clientUrl && origin === clientUrl) return callback(null, true);
+  try {
+    const url = new URL(origin);
+    if (url.hostname.endsWith('.onrender.com') || url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      return callback(null, true);
+    }
+  } catch {}
+  return callback(new Error('Blocked by CORS policy'));
+};
+
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // In same-origin production or mobile/curl/postman requests, origin is undefined
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'production') {
-        return callback(null, true);
-      }
-      return callback(null, true);
-    },
+    origin: checkOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

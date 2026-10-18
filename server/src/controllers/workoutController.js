@@ -11,7 +11,13 @@ const getWorkoutPlans = async (req, res, next) => {
   try {
     const { gymId, studentId } = req.query;
     const query = {};
-    if (gymId) query.gymId = gymId;
+
+    if (['GYM_MANAGER', 'GYM_STAFF', 'TRAINER'].includes(req.user?.role) && req.user?.assignedGym) {
+      query.gymId = req.user.assignedGym;
+    } else if (gymId) {
+      query.gymId = gymId;
+    }
+
     if (studentId) query.studentId = studentId;
 
     const plans = await WorkoutPlan.find(query)
@@ -41,6 +47,27 @@ const createWorkoutPlan = async (req, res, next) => {
   try {
     const validatedData = workoutPlanSchema.parse(req.body);
 
+    if (req.user?.role !== 'SUPER_ADMIN' && req.user?.assignedGym) {
+      if (validatedData.gymId && validatedData.gymId.toString() !== req.user.assignedGym.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You are not authorized to create workout plans for another gym facility.',
+        });
+      }
+    }
+
+    // Verify student belongs to this gym
+    const student = await Student.findById(validatedData.studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student profile not found.' });
+    }
+    if (student.assignedGym && student.assignedGym.toString() !== validatedData.gymId.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Student does not belong to the selected gym facility.',
+      });
+    }
+
     // If caller is a trainer, look up trainer ID
     let trainerId = null;
     if (req.user.role === 'TRAINER') {
@@ -58,8 +85,7 @@ const createWorkoutPlan = async (req, res, next) => {
     });
 
     // Notify student
-    const student = await Student.findById(validatedData.studentId);
-    if (student && student.userId) {
+    if (student.userId) {
       await Notification.create({
         recipientId: student.userId,
         gymId: validatedData.gymId,
@@ -95,6 +121,15 @@ const updateWorkoutPlan = async (req, res, next) => {
     const plan = await WorkoutPlan.findById(id);
     if (!plan) {
       return res.status(404).json({ success: false, message: 'Workout plan not found' });
+    }
+
+    if (req.user?.role !== 'SUPER_ADMIN' && req.user?.assignedGym) {
+      if (plan.gymId && plan.gymId.toString() !== req.user.assignedGym.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You are not authorized to modify workout plans for another gym facility.',
+        });
+      }
     }
 
     Object.assign(plan, req.body);

@@ -18,6 +18,18 @@ const manualCheckIn = async (req, res, next) => {
   try {
     const { rollNumber, gymId, notes } = manualCheckInSchema.parse(req.body);
 
+    // Operator Facility Check: Staff/Manager cannot record attendance for another facility
+    if (
+      (req.user.role === 'GYM_MANAGER' || req.user.role === 'GYM_STAFF') &&
+      req.user.assignedGym &&
+      req.user.assignedGym.toString() !== gymId.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access Denied: You are not authorized to record attendance for another gym facility.',
+      });
+    }
+
     // 1. Verify Gym Exists
     const gym = await Gym.findById(gymId);
     if (!gym) {
@@ -73,16 +85,27 @@ const manualCheckIn = async (req, res, next) => {
       });
     }
 
-    // 6. Record Check-In
-    const newAttendance = await Attendance.create({
-      studentId: student._id,
-      gymId,
-      checkInTime: new Date(),
-      status: 'ACTIVE',
-      method: 'MANUAL',
-      recordedBy: req.user._id,
-      notes: notes || '',
-    });
+    // 6. Record Check-In with concurrency collision catch
+    let newAttendance;
+    try {
+      newAttendance = await Attendance.create({
+        studentId: student._id,
+        gymId,
+        checkInTime: new Date(),
+        status: 'ACTIVE',
+        method: 'MANUAL',
+        recordedBy: req.user._id,
+        notes: notes || '',
+      });
+    } catch (dupErr) {
+      if (dupErr.code === 11000) {
+        return res.status(409).json({
+          success: false,
+          message: `Concurrency conflict: Student '${student.rollNumber}' already has an active check-in session.`,
+        });
+      }
+      throw dupErr;
+    }
 
     // Populate for client response
     const populatedRecord = await Attendance.findById(newAttendance._id)
@@ -127,6 +150,18 @@ const manualCheckIn = async (req, res, next) => {
 const manualCheckOut = async (req, res, next) => {
   try {
     const { rollNumber, attendanceId, gymId, notes } = manualCheckOutSchema.parse(req.body);
+
+    // Operator Facility Check: Staff/Manager cannot check out students for another facility
+    if (
+      (req.user.role === 'GYM_MANAGER' || req.user.role === 'GYM_STAFF') &&
+      req.user.assignedGym &&
+      req.user.assignedGym.toString() !== gymId.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access Denied: You are not authorized to check out students from another gym facility.',
+      });
+    }
 
     let query = { gymId, status: 'ACTIVE' };
 
@@ -254,6 +289,18 @@ const scanQrToken = async (req, res, next) => {
   try {
     const { qrToken, gymId } = qrScanSchema.parse(req.body);
 
+    // Operator Facility Check: Staff/Manager cannot operate scanners for another facility
+    if (
+      (req.user.role === 'GYM_MANAGER' || req.user.role === 'GYM_STAFF') &&
+      req.user.assignedGym &&
+      req.user.assignedGym.toString() !== gymId.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access Denied: You are not authorized to operate scanners for another gym facility.',
+      });
+    }
+
     // 1. Verify Cryptographic Token & Expiry
     let decoded;
     try {
@@ -350,15 +397,26 @@ const scanQrToken = async (req, res, next) => {
         checkOutTime,
       });
     } else {
-      // CHECK IN FLOW
-      const newAttendance = await Attendance.create({
-        studentId: student._id,
-        gymId,
-        checkInTime: new Date(),
-        status: 'ACTIVE',
-        method: 'QR_SCAN',
-        recordedBy: req.user._id,
-      });
+      // CHECK IN FLOW with collision catch
+      let newAttendance;
+      try {
+        newAttendance = await Attendance.create({
+          studentId: student._id,
+          gymId,
+          checkInTime: new Date(),
+          status: 'ACTIVE',
+          method: 'QR_SCAN',
+          recordedBy: req.user._id,
+        });
+      } catch (dupErr) {
+        if (dupErr.code === 11000) {
+          return res.status(409).json({
+            success: false,
+            message: `Concurrency conflict: Student '${student.rollNumber}' already has an active check-in session.`,
+          });
+        }
+        throw dupErr;
+      }
 
       const populated = await Attendance.findById(newAttendance._id)
         .populate({

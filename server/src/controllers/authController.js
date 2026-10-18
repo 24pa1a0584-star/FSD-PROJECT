@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Gym = require('../models/Gym');
@@ -110,12 +111,20 @@ const registerStudent = async (req, res, next) => {
       });
     }
 
-    // Validate gym exists
-    const gym = await Gym.findById(validatedData.assignedGym);
-    if (!gym) {
+    // Validate gym exists (Supports both MongoDB ObjectId and Gym Code e.g. 'BOYS_GYM' / 'GIRLS_GYM')
+    let gym = null;
+    const requestedGym = (validatedData.assignedGym || '').toString().trim();
+
+    if (mongoose.Types.ObjectId.isValid(requestedGym)) {
+      gym = await Gym.findById(requestedGym);
+    } else {
+      gym = await Gym.findOne({ code: requestedGym.toUpperCase() });
+    }
+
+    if (!gym || !gym.isActive) {
       return res.status(404).json({
         success: false,
-        message: 'Selected gym facility does not exist.',
+        message: 'Selected gym facility is either invalid, inactive, or not initialized in the database.',
       });
     }
 
@@ -123,78 +132,96 @@ const registerStudent = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(validatedData.password, salt);
 
-    // Create User
-    const newUser = await User.create({
-      name: validatedData.name,
-      email: validatedData.email,
-      passwordHash,
-      role: 'STUDENT',
-      assignedGym: gym._id,
-      phone: validatedData.contactNumber,
-      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(validatedData.name)}`,
-    });
+    let newUser = null;
+    let newStudent = null;
+    let initialRegistration = null;
 
-    // Create Student Profile
-    const newStudent = await Student.create({
-      userId: newUser._id,
-      rollNumber: validatedData.rollNumber,
-      department: validatedData.department,
-      academicYear: validatedData.academicYear,
-      section: validatedData.section || 'A',
-      contactNumber: validatedData.contactNumber,
-      studentType: validatedData.studentType,
-      assignedGym: gym._id,
-      membershipStatus: 'PENDING',
-      emergencyContact: validatedData.emergencyContact || { name: '', phone: '', relation: '' },
-      profilePhoto: newUser.avatar,
-    });
+    try {
+      // 1. Create User
+      newUser = await User.create({
+        name: validatedData.name,
+        email: validatedData.email,
+        passwordHash,
+        role: 'STUDENT',
+        assignedGym: gym._id,
+        phone: validatedData.contactNumber,
+        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(validatedData.name)}`,
+      });
 
-    // Auto-create initial GymRegistration application
-    const initialRegistration = await GymRegistration.create({
-      studentId: newStudent._id,
-      gymId: gym._id,
-      status: 'PENDING',
-      preferredSlot: 'MORNING (6 AM - 8 AM)',
-      fitnessGoals: 'General campus fitness and athletic conditioning',
-      studentSnapshot: {
-        name: newUser.name,
-        rollNumber: newStudent.rollNumber,
-        department: newStudent.department,
-        academicYear: newStudent.academicYear,
-        studentType: newStudent.studentType,
-        contactNumber: newStudent.contactNumber,
-      },
-    });
+      // 2. Create Student Profile
+      newStudent = await Student.create({
+        userId: newUser._id,
+        rollNumber: validatedData.rollNumber,
+        department: validatedData.department,
+        academicYear: validatedData.academicYear,
+        section: validatedData.section || 'A',
+        contactNumber: validatedData.contactNumber,
+        studentType: validatedData.studentType,
+        assignedGym: gym._id,
+        membershipStatus: 'PENDING',
+        emergencyContact: validatedData.emergencyContact || { name: '', phone: '', relation: '' },
+        profilePhoto: newUser.avatar,
+      });
 
-    const token = generateToken(newUser);
-    setAuthCookie(res, token);
+      // 3. Auto-create initial GymRegistration application
+      initialRegistration = await GymRegistration.create({
+        studentId: newStudent._id,
+        gymId: gym._id,
+        status: 'PENDING',
+        preferredSlot: 'MORNING (6 AM - 8 AM)',
+        fitnessGoals: 'General campus fitness and athletic conditioning',
+        studentSnapshot: {
+          name: newUser.name,
+          rollNumber: newStudent.rollNumber,
+          department: newStudent.department,
+          academicYear: newStudent.academicYear,
+          studentType: newStudent.studentType,
+          contactNumber: newStudent.contactNumber,
+        },
+      });
 
-    // Audit Log
-    await AuditLog.create({
-      userId: newUser._id,
-      action: 'STUDENT_REGISTER',
-      resource: 'Student',
-      resourceId: newStudent._id.toString(),
-      gymId: gym._id,
-      ipAddress: req.ip,
-      details: { rollNumber: newStudent.rollNumber, registrationId: initialRegistration._id },
-    });
+      const token = generateToken(newUser);
+      setAuthCookie(res, token);
 
-    res.status(201).json({
-      success: true,
-      message: 'Student registered successfully. Gym application submitted for manager approval.',
-      token,
-      user: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        assignedGym: gym,
-        avatar: newUser.avatar,
-      },
-      studentProfile: newStudent,
-      registration: initialRegistration,
-    });
+      // Audit Log
+      await AuditLog.create({
+        userId: newUser._id,
+        action: 'STUDENT_REGISTER',
+        resource: 'Student',
+        resourceId: newStudent._id.toString(),
+        gymId: gym._id,
+        ipAddress: req.ip,
+        details: { rollNumber: newStudent.rollNumber, registrationId: initialRegistration._id },
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Student registered successfully. Gym application submitted for manager approval.',
+        token,
+        user: {
+          id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          assignedGym: gym,
+          avatar: newUser.avatar,
+        },
+        studentProfile: newStudent,
+        registration: initialRegistration,
+      });
+    } catch (innerError) {
+      // Clean up any partially created documents to prevent inconsistent database state
+      if (initialRegistration && initialRegistration._id) {
+        await GymRegistration.findByIdAndDelete(initialRegistration._id).catch(() => {});
+      }
+      if (newStudent && newStudent._id) {
+        await Student.findByIdAndDelete(newStudent._id).catch(() => {});
+      }
+      if (newUser && newUser._id) {
+        await User.findByIdAndDelete(newUser._id).catch(() => {});
+      }
+      throw innerError;
+    }
   } catch (error) {
     next(error);
   }
