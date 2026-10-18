@@ -2,9 +2,12 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/vishnufit';
+  const maskedUri = uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
+
   try {
     const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
+      maxPoolSize: 10,
     });
 
     console.log(`[MongoDB] Connected successfully to host: ${conn.connection.host}, database: ${conn.connection.name}`);
@@ -19,8 +22,9 @@ const connectDB = async () => {
 
     return conn;
   } catch (error) {
-    console.error(`[MongoDB] Initial Connection Failed: ${error.message}`);
-    console.error('Please verify MongoDB Community Server is running on port 27017 or check your MONGODB_URI.');
+    console.error(`[MongoDB] Initial Connection Failed to ${maskedUri}: ${error.message}`);
+    console.error('If using MongoDB Atlas: Verify your MONGODB_URI password, database user, and Network Access IP whitelist (0.0.0.0/0).');
+    console.error('If running locally: Verify MongoDB service is active on port 27017.');
     if (process.env.NODE_ENV !== 'test') {
       process.exit(1);
     }

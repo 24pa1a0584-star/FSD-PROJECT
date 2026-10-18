@@ -23,8 +23,15 @@ const CampusGymSettings = require('../models/CampusGymSettings');
 
 const seedData = async () => {
   try {
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PRODUCTION_SEED !== 'true') {
+      console.error('❌ Safety Guard: Database seeding is blocked in production to prevent accidental data loss.');
+      console.error('If you intentionally want to seed a production database, set ALLOW_PRODUCTION_SEED=true.');
+      process.exit(1);
+    }
+
     const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/vishnufit';
-    console.log(`[Seed] Connecting to MongoDB: ${uri}`);
+    const maskedUri = uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
+    console.log(`[Seed] Connecting to MongoDB: ${maskedUri}`);
     await mongoose.connect(uri);
 
     console.log('[Seed] Cleaning old records...');

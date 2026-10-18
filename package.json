@@ -11,7 +11,7 @@
     "start": "node server/src/server.js",
     "seed": "npm run seed --prefix server",
     "test": "npm test --prefix server",
-    "build": "npm run build --prefix client"
+    "build": "npm --prefix server install && npm --prefix client install && npm --prefix client run build"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

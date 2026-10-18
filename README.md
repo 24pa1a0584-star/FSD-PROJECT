@@ -305,22 +305,133 @@ Test coverage includes:
 
 ---
 
-## 🚀 Cloud Deployment Guide
+## 🌐 Complete Free Cloud Deployment Guide (ONE Render Web Service + ONE MongoDB Atlas)
 
-### Frontend on Vercel
-1. Link your GitHub repository in the Vercel Dashboard.
-2. Set **Root Directory** to `client`.
-3. Set **Build Command** to `npm run build` and **Output Directory** to `dist`.
-4. Configure environment variable: `VITE_API_URL=https://your-backend.onrender.com/api`.
+You can deploy the complete **VISHNUFIT** system online **100% free** using **one single Render Web Service** and **one MongoDB Atlas free database**. In this production setup, Express serves the compiled React application, all `/api` endpoints, and Socket.IO real-time WebSockets from the exact same URL: `https://your-app-name.onrender.com`.
 
-### Backend on Render
-1. Create a **New Web Service** and connect your repository.
-2. Set **Root Directory** to `server`.
-3. Set **Build Command** to `npm install` and **Start Command** to `node src/server.js`.
-4. Add environment variables:
-   - `MONGODB_URI`: Your MongoDB Atlas cluster connection string.
-   - `JWT_SECRET`: High-entropy production random string.
-   - `CLIENT_URL`: Your deployed frontend Vercel domain.
+---
+
+### Step 1: Set Up Free MongoDB Atlas Database
+
+1. **Sign Up / Log In**:
+   - Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register) and create a free account.
+2. **Create a Free Cluster**:
+   - Click **Create Deployment** or **Build a Database**.
+   - Select the **M0 Free** tier (Free forever, 512 MB storage).
+   - Choose a cloud provider and region close to you (e.g., **AWS / Mumbai (`ap-south-1`)** or Singapore).
+   - Cluster Name: `Cluster0` (or leave default).
+   - Click **Create Deployment**.
+3. **Create Database User Credentials**:
+   - In the **Security Quickstart** popup (or under **Security** ➔ **Database Access**):
+     - **Authentication Method**: Password.
+     - **Username**: e.g., `vishnu_admin`
+     - **Password**: Click **Autogenerate Secure Password** or enter your own (e.g., `VishnuFit2025Secure`).
+     - **Important**: Copy down this password! You will need it in your connection string.
+     - Click **Create Database User**.
+4. **Configure Network Access (Allow Render to Connect)**:
+   - In the left sidebar, click **Network Access** under **Security**.
+   - Click **+ Add IP Address**.
+   - Click **Allow Access from Anywhere** (this adds `0.0.0.0/0`).
+   - Click **Confirm**. *(Note: This allows your Render web service's dynamic cloud IP to connect securely with your database username and password).*
+5. **Get Your Connection String**:
+   - Go to **Database** (or **Clusters**) in the left sidebar.
+   - Click the **Connect** button next to your cluster.
+   - Choose **Drivers** (Node.js).
+   - Copy the connection string under **3. Add your connection string into your application code**. It looks like:
+     ```text
+     mongodb+srv://vishnu_admin:<password>@cluster0.abcde.mongodb.net/?retryWrites=true&w=majority
+     ```
+   - Replace `<password>` with your actual database user password.
+   - Insert `/vishnufit` right before the `?` so it uses the `vishnufit` database:
+     ```text
+     mongodb+srv://vishnu_admin:VishnuFit2025Secure@cluster0.abcde.mongodb.net/vishnufit?retryWrites=true&w=majority
+     ```
+
+---
+
+### Step 2: Push Your Code to GitHub
+
+1. Open your terminal / PowerShell in `D:\fsd_project\FSD-PROJECT-1`.
+2. Check Git status and commit any changes:
+   ```powershell
+   git add .
+   git commit -m "Configure production single-service deployment for Render"
+   ```
+3. Create a new repository on [GitHub](https://github.com/new) named `vishnufit-campus-gym-management`.
+4. Link and push your repository:
+   ```powershell
+   git remote add origin https://github.com/YOUR_GITHUB_USERNAME/vishnufit-campus-gym-management.git
+   git branch -M main
+   git push -u origin main
+   ```
+
+---
+
+### Step 3: Deploy on Render as ONE Web Service
+
+1. Go to [Render.com](https://render.com/) and sign up or log in with your GitHub account.
+2. In the Render Dashboard, click **New +** ➔ **Web Service**.
+3. Select **Build and deploy from a Git repository** and click **Next**.
+4. Choose your `vishnufit-campus-gym-management` repository.
+5. Fill in the exact settings below:
+
+| Setting Field | Exact Value to Enter | Notes |
+| :--- | :--- | :--- |
+| **Name** | `vishnufit` *(or `vishnufit-vitb`)* | Becomes your link: `https://vishnufit.onrender.com` |
+| **Region** | `Singapore` *(or nearest to you)* | Fast latency for India & Asia |
+| **Branch** | `main` | Production branch |
+| **Root Directory** | *(Leave completely BLANK)* | Render will run from the repository root |
+| **Runtime** | `Node` | Native Node.js execution |
+| **Build Command** | `npm run build` | Installs server & client packages, compiles Vite SPA |
+| **Start Command** | `npm start` | Executes `node server/src/server.js` |
+| **Instance Type** | `Free` | Free 512 MB RAM instance |
+
+6. Scroll down to **Environment Variables** and click **Add Environment Variable** for each of these:
+
+| Key | Example Value | Description |
+| :--- | :--- | :--- |
+| `NODE_ENV` | `production` | Enables production caching, static React serving, secure cookies |
+| `MONGODB_URI` | `mongodb+srv://vishnu_admin:YOUR_PASSWORD@cluster0.abcde.mongodb.net/vishnufit?retryWrites=true&w=majority` | Your MongoDB Atlas connection string from Step 1 |
+| `JWT_SECRET` | `super_secure_jwt_secret_vishnufit_campus_gym_2025_vitb_bhimavaram` | 32+ character key for secure JWT user sessions |
+| `QR_SECRET` | `vishnufit_smart_qr_campus_token_secret_vitb` | HMAC key for 60-second dynamic attendance QR codes |
+| `VITE_SHOW_DEMO_CREDS` | `false` | Set to `false` for secure institutional mode, or `true` for demo buttons |
+
+7. Click **Create Web Service**.
+
+---
+
+### Step 4: Verification & Live Link
+
+Render will start building your project:
+1. It runs `npm run build` (installs server packages, installs client packages, compiles frontend into `client/dist`).
+2. It starts the backend with `npm start` (`node server/src/server.js`).
+3. Once the build completes, the status shows **Live** with a green badge!
+4. Click your public URL:
+   ```text
+   https://vishnufit.onrender.com
+   ```
+
+**What to verify on your live deployment:**
+- **Homepage & SPA**: The VISHNUFIT web application loads with full Vite/Tailwind styling.
+- **Direct Navigation & Refresh**: Navigate to `/scanner` or `/student` and refresh the page (press `F5`) — it loads smoothly without 404 errors.
+- **Backend Health Check**: Open `https://your-service.onrender.com/api/health` — returns JSON with `"status": "healthy"` and `"database": { "status": "Connected" }`.
+- **Authentication**: Log in with your registered account or initial manager account.
+- **Real-Time Sync**: Open two browser tabs; actions in one reflect instantly via Socket.IO WebSocket without page reloads.
+
+---
+
+### Step 5: (Optional) Initial Database Seeding on Atlas
+
+If your MongoDB Atlas database is completely empty and you want to populate it with the Vishnu Boys Gym, Girls Gym, trainers, equipment inventory, and sample student records once:
+1. Temporarily run the seed script locally pointing to your Atlas database:
+   ```powershell
+   $env:MONGODB_URI="mongodb+srv://vishnu_admin:YOUR_PASSWORD@cluster0.abcde.mongodb.net/vishnufit?retryWrites=true&w=majority"
+   npm run seed
+   ```
+2. Your Atlas cluster will now contain all initial facilities, sample users, and equipment.
+3. *Note: The production server will NEVER wipe or seed data automatically on Render startup to protect your live data.*
+
+---
 
 ---
 

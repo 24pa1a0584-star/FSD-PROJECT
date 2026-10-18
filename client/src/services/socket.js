@@ -1,6 +1,19 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+// In production, when frontend and backend are hosted on the same origin on Render,
+// use same-origin (window.location.origin or relative connection).
+// In development, fall back to localhost:5000 if VITE_SOCKET_URL is unset.
+const getSocketUrl = () => {
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+  if (import.meta.env.PROD) {
+    return typeof window !== 'undefined' ? window.location.origin : undefined;
+  }
+  return 'http://localhost:5000';
+};
+
+const SOCKET_URL = getSocketUrl();
 
 let socket = null;
 

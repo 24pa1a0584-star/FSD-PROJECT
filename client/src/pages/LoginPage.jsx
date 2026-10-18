@@ -126,56 +126,63 @@ const LoginPage = () => {
             </div>
           </div>
 
-          {/* Quick Demo Switcher */}
-          <div className="pt-4 border-t border-slate-700/60">
-            <p className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Instant Demo Role Selector:
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('superadmin@vishnu.edu.in', 'SuperAdmin@123')}
-                className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-left transition border border-slate-700 text-slate-200"
-              >
-                👑 Super Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('manager.boys@vishnu.edu.in', 'ManagerBoys@123')}
-                className="p-1.5 rounded-lg bg-blue-950/60 hover:bg-blue-900/60 text-left transition border border-blue-800/60 text-blue-200"
-              >
-                🏋️‍♂️ Boys Manager
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('manager.girls@vishnu.edu.in', 'ManagerGirls@123')}
-                className="p-1.5 rounded-lg bg-purple-950/60 hover:bg-purple-900/60 text-left transition border border-purple-800/60 text-purple-200"
-              >
-                🏃‍♀️ Girls Manager
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('trainer.boys@vishnu.edu.in', 'Trainer@123')}
-                className="p-1.5 rounded-lg bg-teal-950/60 hover:bg-teal-900/60 text-left transition border border-teal-800/60 text-teal-200"
-              >
-                💪 Trainer (Boys)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('rahul.varma@vishnu.edu.in', 'Student@123')}
-                className="p-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 text-left transition border border-emerald-800/60 text-emerald-200"
-              >
-                🎓 Student (Boys)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('ananya.reddy@vishnu.edu.in', 'Student@123')}
-                className="p-1.5 rounded-lg bg-pink-950/60 hover:bg-pink-900/60 text-left transition border border-pink-800/60 text-pink-200"
-              >
-                🎓 Student (Girls)
-              </button>
+          {/* Quick Demo Switcher - Disabled by default in production to protect credentials */}
+          {import.meta.env.VITE_SHOW_DEMO_CREDS === 'true' ? (
+            <div className="pt-4 border-t border-slate-700/60">
+              <p className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Instant Demo Role Selector:
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setDemoCredentials('superadmin@vishnu.edu.in', 'SuperAdmin@123')}
+                  className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-left transition border border-slate-700 text-slate-200"
+                >
+                  👑 Super Admin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDemoCredentials('manager.boys@vishnu.edu.in', 'ManagerBoys@123')}
+                  className="p-1.5 rounded-lg bg-blue-950/60 hover:bg-blue-900/60 text-left transition border border-blue-800/60 text-blue-200"
+                >
+                  🏋️‍♂️ Boys Manager
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDemoCredentials('manager.girls@vishnu.edu.in', 'ManagerGirls@123')}
+                  className="p-1.5 rounded-lg bg-purple-950/60 hover:bg-purple-900/60 text-left transition border border-purple-800/60 text-purple-200"
+                >
+                  🏃‍♀️ Girls Manager
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDemoCredentials('trainer.boys@vishnu.edu.in', 'Trainer@123')}
+                  className="p-1.5 rounded-lg bg-teal-950/60 hover:bg-teal-900/60 text-left transition border border-teal-800/60 text-teal-200"
+                >
+                  💪 Trainer (Boys)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDemoCredentials('rahul.varma@vishnu.edu.in', 'Student@123')}
+                  className="p-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 text-left transition border border-emerald-800/60 text-emerald-200"
+                >
+                  🎓 Student (Boys)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDemoCredentials('ananya.reddy@vishnu.edu.in', 'Student@123')}
+                  className="p-1.5 rounded-lg bg-pink-950/60 hover:bg-pink-900/60 text-left transition border border-pink-800/60 text-pink-200"
+                >
+                  🎓 Student (Girls)
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="pt-4 border-t border-slate-700/60 text-xs text-slate-400 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-brand-400 flex-shrink-0" />
+              <span>Authorized VITB students & physical education staff access only.</span>
+            </div>
+          )}
         </div>
 
         {/* Right Side: Form (Login or Register) */}

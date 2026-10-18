@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
+const path = require('path');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 const { apiLimiter } = require('./middleware/rateLimiter');
 
@@ -24,6 +25,9 @@ const reportRoutes = require('./routes/report.routes');
 
 const app = express();
 
+// Trust proxy for secure cookies behind reverse proxies (Render, Cloudflare, etc.)
+app.set('trust proxy', 1);
+
 // Security Middlewares
 app.use(
   helmet({
@@ -32,13 +36,29 @@ app.use(
   })
 );
 
-const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+const clientUrl = process.env.CLIENT_URL;
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
+];
+if (clientUrl) {
+  allowedOrigins.push(clientUrl);
+}
+
 app.use(
   cors({
-    origin: [clientUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: (origin, callback) => {
+      // In same-origin production or mobile/curl/postman requests, origin is undefined
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'production') {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   })
 );
 
@@ -69,7 +89,21 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 
-// Error Handling
+// In production, serve the compiled React SPA from client/dist
+if (process.env.NODE_ENV === 'production') {
+  const clientDistPath = path.join(__dirname, '../../client/dist');
+  app.use(express.static(clientDistPath));
+
+  // SPA fallback for React Router routes (excluding /api routes)
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
+// Error Handling (handles unmatched /api routes and uncaught errors)
 app.use(notFound);
 app.use(errorHandler);
 

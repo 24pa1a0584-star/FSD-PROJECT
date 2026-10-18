@@ -5,15 +5,33 @@ const app = require('./app');
 const { connectDB, disconnectDB } = require('./config/db');
 const { initSocketIO } = require('./sockets/socketHandler');
 
-const PORT = process.env.PORT || 5000;
-const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+const PORT = parseInt(process.env.PORT, 10) || 5000;
+const HOST = '0.0.0.0';
+const clientUrl = process.env.CLIENT_URL;
 
 const server = http.createServer(app);
+
+// Allowed origins for Socket.IO
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
+];
+if (clientUrl) {
+  allowedOrigins.push(clientUrl);
+}
 
 // Setup Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: [clientUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: (origin, callback) => {
+      // Allow same-origin, whitelist, or any origin in production single-service mode
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'production') {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST'],
   },
@@ -26,13 +44,14 @@ initSocketIO(io);
 const startServer = async () => {
   try {
     await connectDB();
-    server.listen(PORT, () => {
+    server.listen(PORT, HOST, () => {
       console.log(`=======================================================`);
-      console.log(`🚀 VISHNUFIT Backend Server Started Successfully`);
+      console.log(`🚀 VISHNUFIT Server Started Successfully`);
       console.log(`🏛️ Vishnu Institute of Technology, Bhimavaram`);
-      console.log(`📡 REST API:       http://localhost:${PORT}/api`);
-      console.log(`🩺 Health Check:   http://localhost:${PORT}/api/health`);
-      console.log(`⚡ Socket.IO:      Active on ws://localhost:${PORT}`);
+      console.log(`📡 URL:            http://${HOST}:${PORT}`);
+      console.log(`🩺 Health Check:   http://${HOST}:${PORT}/api/health`);
+      console.log(`⚡ Socket.IO:      Active on ws://${HOST}:${PORT}`);
+      console.log(`🌍 Environment:    ${process.env.NODE_ENV || 'development'}`);
       console.log(`=======================================================`);
     });
   } catch (error) {
