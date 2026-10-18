@@ -1,0 +1,315 @@
+{
+  "info": {
+    "_postman_id": "b3e94a8f-2849-4972-8f92-91e7c53d1029",
+    "name": "VISHNUFIT - Campus Gym Management API",
+    "description": "Postman API Collection for Vishnu Institute of Technology Gym Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Login (Super Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@vishnu.edu.in\",\n  \"password\": \"SuperAdmin@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login (Boys Gym Manager)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.boys@vishnu.edu.in\",\n  \"password\": \"ManagerBoys@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User Profile (/me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gyms & Dashboards",
+      "item": [
+        {
+          "name": "List All Gyms",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/gyms",
+              "host": ["{{baseUrl}}"],
+              "path": ["gyms"]
+            }
+          }
+        },
+        {
+          "name": "Campus Global Dashboard (Super Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/gyms/campus/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["gyms", "campus", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Facility Dashboard By Gym ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/gyms/{{boysGymId}}/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["gyms", "{{boysGymId}}", "dashboard"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Smart Attendance",
+      "item": [
+        {
+          "name": "Manual Check-In by Roll Number",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rollNumber\": \"21PA1A0501\",\n  \"gymId\": \"{{boysGymId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/check-in",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "check-in"]
+            }
+          }
+        },
+        {
+          "name": "Generate Student Dynamic QR Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/qr-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "qr-token"]
+            }
+          }
+        },
+        {
+          "name": "Scan QR Token (Atomic Check-in/out)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrToken\": \"{{studentQrToken}}\",\n  \"gymId\": \"{{boysGymId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/qr-scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "qr-scan"]
+            }
+          }
+        },
+        {
+          "name": "Manual Check-Out",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rollNumber\": \"21PA1A0501\",\n  \"gymId\": \"{{boysGymId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/check-out",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "check-out"]
+            }
+          }
+        },
+        {
+          "name": "Get Attendance Logs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/attendance?gymId={{boysGymId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance"],
+              "query": [
+                { "key": "gymId", "value": "{{boysGymId}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registrations & Memberships",
+      "item": [
+        {
+          "name": "List Pending Applications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/registrations?status=PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["registrations"],
+              "query": [{ "key": "status", "value": "PENDING" }]
+            }
+          }
+        },
+        {
+          "name": "Approve Registration Application",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remarks\": \"Approved after document verification.\",\n  \"durationMonths\": 6\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/registrations/{{registrationId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["registrations", "{{registrationId}}", "approve"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Equipment",
+      "item": [
+        {
+          "name": "List Equipment",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/equipment?gymId={{boysGymId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["equipment"],
+              "query": [{ "key": "gymId", "value": "{{boysGymId}}" }]
+            }
+          }
+        },
+        {
+          "name": "Report Equipment Maintenance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issueDescription\": \"Cable tension calibration needed\",\n  \"status\": \"REPORTED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/equipment/{{equipmentId}}/maintenance",
+              "host": ["{{baseUrl}}"],
+              "path": ["equipment", "{{equipmentId}}", "maintenance"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "boysGymId",
+      "value": ""
+    },
+    {
+      "key": "registrationId",
+      "value": ""
+    },
+    {
+      "key": "equipmentId",
+      "value": ""
+    },
+    {
+      "key": "studentQrToken",
+      "value": ""
+    }
+  ]
+}
